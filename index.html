@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Real Estate | Audit Systémique</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;800;900&family=Inter:wght@300;400;500;600;800&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #020617 0%, #0a0f24 50%, #17113a 100%); 
+            color: white; 
+            overflow: hidden; 
+        }
+        .font-title { font-family: 'Montserrat', sans-serif; }
+        
+        .text-gradient-platinum {
+            background: linear-gradient(to bottom, #ffffff 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .glass-panel {
+            background: linear-gradient(145deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        }
+        
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-enter { animation: slideUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+        
+        .input-quantum {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.15);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .input-quantum:focus {
+            border-color: #60a5fa;
+            background: rgba(255,255,255,0.05);
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.2);
+            outline: none;
+        }
+
+        .glitch-text { color: #ef4444; font-weight: 900; text-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
+    </style>
+</head>
+<body class="h-screen w-full flex flex-col items-center justify-center relative">
+
+    <div class="absolute top-8 left-8 z-50 animate-enter pointer-events-none">
+        <img src="https://i.ibb.co/C3KXLBJM/Quantum-1.png" alt="Quantum" class="h-24 md:h-36 object-contain drop-shadow-[0_0_20px_rgba(255,255,255,0.15)]">
+    </div>
+
+    <div id="app" class="w-full h-full flex items-center justify-center relative z-10 p-4 overflow-y-auto"></div>
+
+    <div id="nav-footer" class="hidden fixed bottom-0 left-0 w-full p-6 z-50 bg-[#020617]/95 border-t border-white/5 flex justify-between items-center backdrop-blur-xl">
+        <div id="counter" class="font-title text-xl text-white w-28">01 <span class="text-gray-600 text-sm">/ 14</span></div>
+        <div class="flex gap-4">
+            <button onclick="navigate(-1)" class="p-4 border border-white/10 hover:bg-white/5 text-white rounded-full transition-colors"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+            <button onclick="navigate(1)" class="px-8 py-4 bg-white text-black font-black hover:scale-105 transition-all rounded-full flex items-center gap-3 shadow-[0_0_20px_rgba(255,255,255,0.2)]">SUIVANT <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
+        </div>
+        <div class="absolute top-0 left-0 h-[2px] bg-blue-500 transition-all duration-300" id="progress-bar" style="width: 0%"></div>
+    </div>
+
+    <script>
+        const MARKET_DB = {
+            'FR': {
+                'paris': { rival: 'ULYS Immobilier', fol: '28k+', loss: '185 000', market: '12.5B', gain: '1.5M', traffic_gap: '-75%', pos_gap: '12 vs 1' },
+                'default': { rival: 'Réseaux Mandataires', fol: '12k', loss: '75 000', market: '1.2B', gain: '500k', traffic_gap: '-60%', pos_gap: '8 vs 2' },
+                currency: '€'
+            },
+            'CA': {
+                'montreal': { rival: 'McGill Immobilier', fol: '35k+', loss: '145 000', market: '28B', gain: '1.2M', traffic_gap: '-86%', pos_gap: '8 vs 1' },
+                'default': { rival: 'Top Agency', fol: '25k', loss: '95 000', market: '12B', gain: '850k', traffic_gap: '-70%', pos_gap: '5 vs 1' },
+                currency: '$'
+            }
+        };
+
+        // Correction du bug d'initialisation du STATE
+        let STATE = { step: 0, country: '', geo: { l1: '', l2: '', l3: '' }, name: '', followers: '', claim_share: '', data: {} };
+        let currentIndex = 0;
+        let slides = [];
+        let analysisDate = null;
+
+        function renderCountrySelect() {
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="glass-panel p-16 max-w-5xl w-full text-center animate-enter rounded-3xl relative">
+                    <h2 class="text-6xl md:text-7xl font-title text-white mb-4 uppercase tracking-tighter">AUDIT <span class="text-gradient-platinum">QUANTUM</span></h2>
+                    <p class="text-xs text-blue-400 uppercase tracking-[0.4em] mb-16 font-bold">Diagnostic financier & Asymétrie de marché</p>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <button onclick="selectCountry('FR')" class="group p-10 border border-white/10 hover:border-blue-500/50 bg-white/5 hover:bg-blue-900/20 transition-all rounded-2xl flex flex-col items-center">
+                            <div class="text-6xl mb-4 group-hover:scale-110 transition-transform">🇫🇷</div>
+                            <div class="font-title text-2xl text-white mb-1 tracking-widest">FRANCE</div>
+                        </button>
+                        <button onclick="selectCountry('CA')" class="group p-10 border border-white/10 hover:border-blue-500/50 bg-white/5 hover:bg-blue-900/20 transition-all rounded-2xl flex flex-col items-center">
+                            <div class="text-6xl mb-4 group-hover:scale-110 transition-transform">🇨🇦</div>
+                            <div class="font-title text-2xl text-white mb-1 tracking-widest">CANADA</div>
+                        </button>
+                    </div>
+                </div>`;
+        }
+
+        function selectCountry(code) { STATE.country = code; renderDetailsForm(); }
+
+        function renderDetailsForm() {
+            const isFr = STATE.country === 'FR';
+            const labels = isFr ? {l2: "Ville", l3: "Quartier (Micro-marché)"} : {l2: "Ville", l3: "Secteur (ex: Griffintown)"};
+            
+            document.getElementById('app').innerHTML = `
+                <div class="glass-panel p-10 max-w-4xl w-full animate-enter rounded-3xl border-t border-white/20">
+                    <h2 class="text-4xl font-title mb-8 uppercase text-white tracking-tight border-b border-white/10 pb-6">PARAMÈTRES <span class="text-blue-400">D'AUDIT</span></h2>
+                    <div class="grid grid-cols-2 gap-8 mb-8">
+                        <div><label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block tracking-wider">Cible (Nom Agence / Courtier)</label><input id="inp-name" class="input-quantum w-full p-4 rounded-xl text-lg font-bold" placeholder="ex: Elite Immobilier"></div>
+                        <div><label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block tracking-wider">Claim Part de Marché (Interne)</label><input id="inp-claim" class="input-quantum w-full p-4 rounded-xl text-lg" placeholder="ex: 25%"></div>
+                        <div><label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block tracking-wider">${labels.l2}</label><input id="inp-l2" class="input-quantum w-full p-4 rounded-xl" placeholder="${isFr ? 'Paris' : 'Montréal'}"></div>
+                        <div><label class="text-[10px] text-gray-400 uppercase font-bold mb-2 block tracking-wider">${labels.l3}</label><input id="inp-l3" class="input-quantum w-full p-4 rounded-xl" placeholder="${isFr ? 'Le Marais' : 'Griffintown'}"></div>
+                    </div>
+                    <button onclick="runAnalysis()" class="w-full bg-white text-black hover:bg-gray-200 font-black text-xl py-5 rounded-xl uppercase tracking-widest transition-all shadow-[0_0_30px_rgba(255,255,255,0.15)]">LANCER LE DIAGNOSTIC NI 200.15</button>
+                </div>`;
+            lucide.createIcons();
+        }
+
+        function runAnalysis() {
+            STATE.name = document.getElementById('inp-name').value || "Agence Auditée";
+            STATE.claim_share = document.getElementById('inp-claim').value || "25%";
+            STATE.geo.l2 = document.getElementById('inp-l2').value || (STATE.country === 'FR' ? "Paris" : "Montréal");
+            STATE.geo.l3 = document.getElementById('inp-l3').value || (STATE.country === 'FR' ? "Le Marais" : "Griffintown");
+            
+            const cityKey = STATE.geo.l2.toLowerCase().trim();
+            const countryDB = MARKET_DB[STATE.country];
+            STATE.data = countryDB[cityKey] || countryDB['default'];
+            STATE.data.curr = countryDB.currency;
+            analysisDate = new Date(); 
+
+            const app = document.getElementById('app');
+            app.innerHTML = `
+                <div class="text-center max-w-2xl mx-auto px-6 animate-enter">
+                    <div class="w-24 h-24 border-2 border-gray-800 border-t-blue-500 rounded-full animate-spin mx-auto mb-10 shadow-[0_0_30px_rgba(59,130,246,0.3)]"></div>
+                    <h2 class="text-2xl font-title text-white mb-6 tracking-[0.2em] uppercase">VÉRIFICATION CROISÉE : <span class="text-blue-400">${STATE.geo.l3.toUpperCase()}</span></h2>
+                    <div class="w-full bg-black/50 rounded-full h-1 mb-4 border border-white/10"><div id="load-bar" class="h-full bg-blue-500 shadow-[0_0_15px_#3b82f6] transition-all" style="width:0%"></div></div>
+                    <p class="font-mono text-xs text-gray-500 tracking-wider text-left pl-4" id="load-log">> Init NI 200.15...</p>
+                </div>`;
+
+            let progress = 0;
+            const logs = [
+                `> Extraction Centris/MLS position...`,
+                `> Analyse de trafic SimilarWeb vs ${STATE.data.rival}...`,
+                `> Scraping avis & NPS client mystère...`,
+                `> Calcul de discrépance et perte financière...`,
+                `> Compilation preuve irréfutable.`
+            ];
+            
+            const timer = setInterval(() => {
+                progress += 2;
+                document.getElementById('load-bar').style.width = progress + '%';
+                if(progress % 20 === 0 && logs[(progress/20)-1]) document.getElementById('load-log').innerText = logs[(progress/20)-1];
+                if(progress >= 100) { clearInterval(timer); buildSlides(); showPresentation(); }
+            }, 35);
+        }
+
+        function buildSlides() {
+            slides = [
+                { type: 'cover', title: "", subtitle: "", tag: "CONFIDENTIEL" },
+                { type: 'scepticisme', title: "VÉRITÉ BRUTALE", subtitle: "MÉTHODOLOGIE : SCEPTICISME PROFESSIONNEL (3 SOURCES)", insight: "Conclusion de l'auditeur : Surévaluation systémique de la position concurrentielle." },
+                { type: 'split-loss', title: "COÛT SILENCIEUX", val1: `2`, label1: "COMMISSIONS LUXE/AN", val2: ``, label2: "PERTE ANNUELLE RÉELLE", desc: "" },
+                { type: 'menace', title: "LA MENACE", subtitle: "DOMINATION ALGORITHMIQUE", rival: "", rival_stat: "70%", rival_desc: "", urgency: "" },
+                { type: 'cards-freins', title: "VOS 3 FREINS", subtitle: "POURQUOI LA PERTE S'ACCÉLÈRE", items: [{num: "01", title: "TEMPS", desc: "Le montage vidéo pro est un job à temps plein. L'amateurisme détruit le Brand Equity."}, {num: "02", title: "CRÉDIBILITÉ", desc: "Peur du ridicule face à des concurrents qui déploient une qualité type Netflix."}, {num: "03", title: "ROI BIAISÉ", desc: "Acquisition de 'likes' au lieu de signatures de mandats qualifiés."}] },
+                { type: 'checklist', title: "MÉTHODE QUANTUM", subtitle: "SYSTÈME D'ACQUISITION (4 PILIERS)", items: ["PRODUCTION CINÉMA (Nous gérons 100%, qualité Netflix)", "SCRIPTS NEURO-MARKETING (Vente invisible et autorité)", "DIFFUSION GÉO-CIBLÉE", "CONVERSION IA 24/7 (Qualification automatique)"] },
+                { type: 'metrics', title: "PROJECTIONS DATA", subtitle: "BASÉ SUR MODÈLE MRB/MRN", items: [{val: "+400%", label: "Visibilité Locale", sub: "Dès J+30"}, {val: "15+", label: "Leads Qualifiés", sub: "Par mois"}, {val: "x10", label: "ROI Autofinancé", sub: "Dès le 1er mandat"}] },
+                { type: 'funnel', title: "ENTONNOIR DE DOMINATION", roi: "" },
+                { type: 'roadmap', title: "ROADMAP 90 JOURS", subtitle: "DÉPLOIEMENT SYSTÉMIQUE" },
+                { type: 'faq', title: "OBJECTIONS COMMUNES", qa: [{q: "Je n'ai pas le temps pour les tournages", a: "L'équipe Quantum gère 100%. Votre implication : 15 min/semaine pour validation."}, {q: "Et si l'image fait 'cheap' ?", a: "Nous utilisons du matériel de production Cinéma. L'objectif est d'augmenter votre Brand Equity (+20% perception prix)."}, {q: "Je veux du ROI, pas des vues", a: "Notre IA filtre les curieux. Seuls les prospects qualifiés atterrissent dans votre CRM."}] },
+                { type: 'guarantee', title: "RISQUE ZÉRO", subtitle: "PHASE 1 (30 JOURS)", offer: ["Audit concurrentiel complet (Livrable PDF)", "6 FILMS NETFLIX qui raflent les commissions", "Système IA de qualification intégré au CRM"], text: "SATISFAIT OU REMBOURSÉ 100%" },
+                { type: 'proof', title: "RÉSULTATS PROUVÉS", subtitle: "ÉTUDES DE CAS & BENCHMARKS", items: [{stat: "+900%", label: "LEADS", desc: "Passé de 2 à 18 mandats/mois - Pierre L."}, {stat: "450K", label: "IMPRESSIONS", desc: "Domination algorithmique ciblée sur 1 quartier"}, {stat: "-55%", label: "TAUX REBOND", desc: "Trafic converti via refonte UX/Vidéo"}] },
+                { type: 'cta', title: "DÉCISION", choiceA: {title: "STATU QUO", price: ""}, choiceB: {title: "MÉTHODE QUANTUM", price: ""} },
+                { type: 'final', title: "ACTION", subtitle: "Documentation vérifiée. Le marché ne vous attendra pas." }
+            ];
+        }
+
+        function personalizeSlides() {
+            if(!STATE.data || !slides.length) return;
+            const D = STATE.data;
+            const q = STATE.geo.l3.toUpperCase();
+            const loc = STATE.geo.l2.toUpperCase();
+
+            slides[0].title = `DOMINATION ${loc} 2026`;
+            slides[0].subtitle = `AUDIT MARQUE : ${STATE.name.toUpperCase()} (${q})`;
+
+            slides[1].loc = q;
+            slides[1].claim = STATE.claim_share;
+            slides[1].rival = D.rival;
+            slides[1].traffic = D.traffic_gap;
+            slides[1].pos = D.pos_gap;
+
+            slides[2].val2 = `${D.loss}${D.curr}`;
+            slides[2].desc = `C'est mathématiquement le montant laissé à ${D.rival} par absence de présence vidéo dominante.`;
+
+            slides[3].rival = D.rival;
+            slides[3].rival_desc = `${D.rival} raflera 70% du marché NEUF sur ${q} grâce à une omniprésence digitale.`;
+
+            slides[5].items[2] = `DIFFUSION GÉO-CIBLÉE (${q} Uniquement)`;
+
+            slides[7].roi = `OBJECTIF : RÉCUPÉRER VOS ${D.loss}${D.curr} LAISSÉS AU LEADER`;
+
+            slides[12].choiceA.price = `PERTE ACTUELLE : ${D.loss}${D.curr}/AN`;
+            slides[12].choiceB.price = `GAIN BRAND EQUITY : ${D.gain}${D.curr}`;
+        }
+
+        function generateCalendlyLink() {
+            const p = new URLSearchParams({ nom: STATE.name, ville: STATE.geo.l2, quartier: STATE.geo.l3, perte: STATE.data.loss, rival: STATE.data.rival });
+            return `https://calendly.com/quantum-immobilier/audit?${p.toString()}`;
+        }
+
+        function addCountdown() {
+            if(!analysisDate) return 90;
+            const remaining = Math.max(0, 90 - Math.floor((new Date() - analysisDate) / 86400000));
+            
+            if(slides[3]) slides[3].urgency = `Fenêtre d'action : ${remaining} jours avant saturation complète du marché.`;
+            if(slides[12]) slides[12].urgency = `⏳ ${remaining} JOURS RESTANTS - 3 CRÉNEAUX AUDIT CETTE SEMAINE`;
+            if(slides[13]) slides[13].urgency = `${remaining} JOURS RESTANTS - 3 PLACES CETTE SEMAINE`;
+        }
+
+        function showPresentation() { document.getElementById('nav-footer').classList.remove('hidden'); renderSlide(); }
+
+        function renderSlide() {
+            personalizeSlides();
+            addCountdown();
+
+            if(currentIndex >= slides.length) currentIndex = 0;
+            if(currentIndex < 0) currentIndex = slides.length - 1;
+            const s = slides[currentIndex];
+            const app = document.getElementById('app');
+            let html = '';
+
+            if(s.type === 'cover') {
+                html = `<div class="text-center animate-enter px-6 max-w-5xl"><div class="inline-block border border-red-500/30 px-6 py-2 text-xs text-red-400 font-bold tracking-[0.3em] uppercase mb-12 bg-red-900/10 rounded-full">${s.tag}</div><h1 class="text-5xl md:text-8xl font-title text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-500 mb-6 leading-none uppercase drop-shadow-2xl">${s.title}</h1><div class="h-[1px] w-40 bg-blue-500 mx-auto mb-8"></div><p class="text-xl md:text-2xl text-gray-300 font-light max-w-2xl mx-auto tracking-widest uppercase font-title">${s.subtitle}</p></div>`;
+            }
+            else if(s.type === 'scepticisme') {
+                html = `<div class="w-full max-w-6xl px-4 animate-enter"><h2 class="text-4xl md:text-5xl font-title text-white mb-2 text-center uppercase">${s.title}</h2><p class="text-[10px] tracking-[0.3em] text-blue-400 mb-10 text-center uppercase font-bold">${s.subtitle}</p>
+                <div class="glass-panel overflow-hidden rounded-2xl border border-white/10 shadow-[0_0_30px_rgba(0,0,0,0.8)]">
+                    <div class="grid grid-cols-4 bg-white/5 p-5 border-b border-white/10 text-[10px] md:text-xs font-black tracking-widest text-gray-400 uppercase">
+                        <div>Métrique (Secteur ${s.loc})</div><div>Claim (Direction)</div><div>Réalité (3 Sources)</div><div>Discrépance</div>
+                    </div>
+                    <div class="grid grid-cols-4 p-6 border-b border-white/5 items-center bg-red-900/5">
+                        <div class="text-xs text-gray-300 font-bold uppercase">Part de Marché</div>
+                        <div class="text-lg text-white font-title">${s.claim}</div>
+                        <div class="text-sm text-gray-400">Position ${s.pos} (Centris/MLS)</div>
+                        <div class="text-xl glitch-text font-title">-67%</div>
+                    </div>
+                    <div class="grid grid-cols-4 p-6 border-b border-white/5 items-center">
+                        <div class="text-xs text-gray-300 font-bold uppercase">Trafic & Visibilité</div>
+                        <div class="text-lg text-white font-title">Stable</div>
+                        <div class="text-sm text-gray-400">${s.traffic} vs ${s.rival} (SimilarWeb)</div>
+                        <div class="text-xl glitch-text font-title">ALERTE ROUGE</div>
+                    </div>
+                    <div class="grid grid-cols-4 p-6 items-center">
+                        <div class="text-xs text-gray-300 font-bold uppercase">Expérience Client</div>
+                        <div class="text-lg text-white font-title">"Leader"</div>
+                        <div class="text-sm text-gray-400">Test Mystère : Suivi > 24h</div>
+                        <div class="text-xl text-orange-400 font-title font-black">NPS Défaillant</div>
+                    </div>
+                </div>
+                <div class="mt-8 text-center"><span class="text-xs text-red-300 border border-red-500/30 px-6 py-3 rounded bg-red-900/20 font-mono tracking-widest uppercase">⚠️ ${s.insight}</span></div></div>`;
+            }
+            else if(s.type === 'split-loss') {
+                html = `<div class="text-center animate-enter px-6 w-full max-w-6xl"><h2 class="text-4xl md:text-5xl font-title text-white mb-12 uppercase tracking-wide">${s.title}</h2><div class="flex flex-col md:flex-row gap-8 justify-center items-center"><div class="glass-panel p-10 w-full md:w-1/3 opacity-50 grayscale rounded-2xl border border-white/5"><p class="text-6xl font-title text-white mb-2">${s.val1}</p><p class="text-xs tracking-widest text-gray-400 font-bold uppercase">${s.label1}</p></div><div class="text-2xl text-red-500 font-black font-title">➔</div><div class="glass-panel p-12 w-full md:w-2/3 border border-red-500/40 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-900/20 to-transparent relative overflow-hidden rounded-2xl shadow-[0_0_50px_rgba(239,68,68,0.15)]"><div class="absolute top-0 left-0 w-2 h-full bg-red-600"></div><p class="text-xs tracking-[0.3em] text-red-300 mb-4 font-black uppercase">${s.label2}</p><p class="text-6xl md:text-8xl font-title text-white drop-shadow-2xl tracking-tighter">${s.val2}</p></div></div><p class="text-lg text-gray-400 mt-12 italic max-w-2xl mx-auto font-light">"${s.desc}"</p></div>`;
+            }
+            else if(s.type === 'menace') {
+                html = `<div class="w-full max-w-5xl px-6 animate-enter text-center"><h2 class="text-5xl font-title text-white mb-4 uppercase">${s.title}</h2><p class="text-[10px] tracking-[0.3em] text-gray-500 mb-12 uppercase font-bold">${s.subtitle}</p><div class="glass-panel p-16 border border-white/10 rounded-2xl relative overflow-hidden bg-black/40"><h3 class="text-3xl font-title text-gray-400 mb-6 uppercase">SI RIEN NE CHANGE :</h3><p class="text-4xl md:text-5xl text-white font-black mb-8 leading-tight font-title">${s.rival_desc}</p><div class="inline-block bg-red-600/20 border border-red-500/50 px-6 py-3 rounded-lg text-red-400 font-mono text-sm tracking-widest uppercase shadow-[0_0_20px_rgba(239,68,68,0.2)]">${s.urgency}</div></div></div>`;
+            }
+            else if(s.type === 'cards-freins') {
+                html = `<div class="w-full max-w-6xl px-6 animate-enter"><h2 class="text-4xl md:text-5xl font-title text-white mb-2 text-center uppercase">${s.title}</h2><p class="text-[10px] tracking-[0.3em] text-red-400 mb-12 text-center uppercase font-bold">${s.subtitle}</p><div class="grid md:grid-cols-3 gap-6">${s.items.map(i => `<div class="glass-panel p-8 border-t-2 border-white/10 hover:border-blue-400 transition-all rounded-xl bg-white/5"><div class="text-4xl font-black text-gray-700 font-title mb-4">${i.num}</div><h3 class="text-2xl font-black text-white mb-4 uppercase font-title">${i.title}</h3><p class="text-sm text-gray-400 leading-relaxed font-light">${i.desc}</p></div>`).join('')}</div></div>`;
+            }
+            else if(s.type === 'checklist') {
+                html = `<div class="w-full max-w-4xl px-6 animate-enter"><h2 class="text-4xl md:text-5xl font-title text-white mb-2 text-center uppercase">${s.title}</h2><p class="text-xs tracking-[0.3em] text-blue-400 mb-16 text-center uppercase font-bold">${s.subtitle}</p><div class="space-y-6">${s.items.map(item => `<div class="glass-panel p-6 flex items-center gap-6 rounded-xl border border-white/10 hover:bg-white/5 transition-colors"><div class="w-8 h-8 rounded bg-blue-500/20 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/50"><i data-lucide="check" class="w-5 h-5"></i></div><div class="text-lg md:text-xl font-medium text-gray-200 tracking-wide">${item}</div></div>`).join('')}</div></div>`;
+            }
+            else if(s.type === 'metrics') {
+                html = `<div class="w-full max-w-5xl px-6 animate-enter text-center"><h2 class="text-5xl font-title text-white mb-4 uppercase">${s.title}</h2><p class="text-[10px] tracking-[0.3em] text-gray-400 mb-12 uppercase font-bold">${s.subtitle}</p><div class="grid md:grid-cols-3 gap-8">${s.items.map(i => `<div class="glass-panel p-10 rounded-2xl border border-white/10 bg-white/5 flex flex-col items-center justify-center"><p class="text-5xl md:text-6xl text-white font-black mb-4 font-title drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">${i.val}</p><p class="text-sm text-blue-300 uppercase tracking-widest font-bold mb-2">${i.label}</p><p class="text-[10px] text-gray-500 uppercase tracking-widest">${i.sub}</p></div>`).join('')}</div></div>`;
+            }
+            else if(s.type === 'funnel') {
+                html = `<div class="w-full max-w-4xl px-6 animate-enter text-center"><h2 class="text-5xl font-title text-white mb-16 uppercase">${s.title}</h2><div class="flex flex-col items-center gap-2 mb-12"><div class="w-full max-w-3xl glass-panel py-5 flex justify-between px-10 items-center border-l-4 border-gray-600"><span class="text-xl text-gray-400 uppercase tracking-widest font-bold">ATTENTION</span><span class="text-3xl font-black text-white font-title">100K VUES</span></div><div class="w-[85%] max-w-3xl glass-panel py-5 flex justify-between px-10 items-center border-l-4 border-gray-400"><span class="text-xl text-gray-300 uppercase tracking-widest font-bold">INTÉRÊT</span><span class="text-3xl font-black text-white font-title">1K CLICS</span></div><div class="w-[70%] max-w-3xl glass-panel py-5 flex justify-between px-10 items-center border-l-4 border-blue-400"><span class="text-xl text-blue-200 uppercase tracking-widest font-bold">DÉSIR</span><span class="text-3xl font-black text-white font-title">100 LEADS</span></div><div class="w-[55%] max-w-3xl glass-panel py-6 flex justify-between px-10 items-center border-l-4 border-blue-600 bg-blue-900/20 shadow-[0_0_30px_rgba(37,99,235,0.2)]"><span class="text-xl text-blue-400 uppercase tracking-widest font-black">ACTION</span><span class="text-4xl font-black text-white font-title">15 MANDATS</span></div></div><div class="inline-block border border-blue-500/30 bg-blue-900/10 px-8 py-4 rounded-xl"><p class="text-xl text-white font-black font-title uppercase tracking-widest">${s.roi}</p></div></div>`;
+            }
+            else if(s.type === 'roadmap') {
+                html = `<div class="w-full max-w-5xl px-6 animate-enter text-center"><h2 class="text-5xl font-title text-white mb-4 uppercase">${s.title}</h2><p class="text-[10px] tracking-[0.3em] text-gray-500 mb-16 uppercase font-bold">${s.subtitle}</p><div class="relative max-w-3xl mx-auto text-left"><div class="absolute left-[23px] top-4 bottom-4 w-[2px] bg-white/10"></div><div class="space-y-8 relative"><div class="flex gap-8"><div class="w-12 h-12 rounded-full bg-blue-600 text-white flex items-center justify-center font-black z-10 shadow-[0_0_15px_rgba(37,99,235,0.5)]">M1</div><div class="glass-panel p-6 flex-1 rounded-xl"><h4 class="text-xl font-black text-white uppercase mb-2">Fondations & Visibilité</h4><p class="text-gray-400 text-sm">Tournage des 4 premiers "Films Netflix", setup SEO Local, intégration IA CRM.</p></div></div><div class="flex gap-8"><div class="w-12 h-12 rounded-full bg-white/10 text-white flex items-center justify-center font-black z-10">M3</div><div class="glass-panel p-6 flex-1 rounded-xl"><h4 class="text-xl font-black text-white uppercase mb-2">Autorité de Quartier</h4><p class="text-gray-400 text-sm">12 vidéos actives, reciblage IP des visiteurs chauds, génération des premiers mandats.</p></div></div><div class="flex gap-8"><div class="w-12 h-12 rounded-full bg-white text-black flex items-center justify-center font-black z-10 shadow-[0_0_15px_rgba(255,255,255,0.5)]">M6</div><div class="glass-panel p-6 flex-1 rounded-xl"><h4 class="text-xl font-black text-white uppercase mb-2">Dominance & Scalabilité</h4><p class="text-gray-400 text-sm">Le système s'autofinance. Acquisition de >15% des parts de marché du secteur.</p></div></div></div></div></div>`;
+            }
+            else if(s.type === 'faq') {
+                html = `<div class="w-full max-w-5xl px-6 animate-enter"><h2 class="text-5xl font-title text-white mb-12 text-center uppercase">${s.title}</h2><div class="space-y-4">${s.qa.map(qa => `<div class="glass-panel p-8 flex flex-col md:flex-row gap-8 items-start hover:bg-white/5 transition-colors rounded-xl border border-white/5"><div class="md:w-5/12 text-xl font-title text-gray-300 font-bold leading-snug">"${qa.q}"</div><div class="md:w-7/12 text-lg text-gray-400 font-light border-l border-white/10 pl-8"><span class="text-blue-400 font-black mr-2">→</span> ${qa.a}</div></div>`).join('')}</div></div>`;
+            }
+            else if(s.type === 'guarantee') {
+                html = `<div class="text-center animate-enter px-6 max-w-4xl"><div class="glass-panel p-16 border border-green-500/30 bg-green-900/5 rounded-3xl relative overflow-hidden"><div class="absolute top-0 right-0 w-64 h-64 bg-green-500/10 blur-[80px]"></div><div class="flex justify-center mb-8"><i data-lucide="shield-check" class="w-20 h-20 text-green-400 drop-shadow-[0_0_20px_rgba(74,222,128,0.4)]"></i></div><h2 class="text-5xl md:text-6xl font-title text-white mb-4 uppercase tracking-tight">${s.title}</h2><p class="text-xs tracking-[0.4em] text-gray-400 mb-12 uppercase font-bold">${s.subtitle}</p><div class="max-w-xl mx-auto text-left mb-12 bg-black/40 p-8 rounded-xl border border-white/5"><ul class="space-y-5">${s.offer.map(o => `<li class="flex items-start gap-4 text-gray-200"><i data-lucide="check-circle-2" class="w-6 h-6 text-green-400 shrink-0 mt-0.5"></i> <span class="text-lg font-medium">${o}</span></li>`).join('')}</ul></div><div class="border-t border-white/10 pt-8 inline-block"><p class="text-2xl md:text-3xl font-black text-white uppercase tracking-widest font-title text-green-400">${s.text}</p></div></div></div>`;
+            }
+            else if(s.type === 'proof') {
+                html = `<div class="w-full max-w-6xl px-6 animate-enter text-center"><h2 class="text-5xl font-title text-white mb-4 uppercase">${s.title}</h2><p class="text-[10px] tracking-[0.3em] text-gray-400 mb-16 uppercase font-bold">${s.subtitle}</p><div class="grid md:grid-cols-3 gap-8">${s.items.map(i => `<div class="glass-panel p-10 rounded-2xl border-t-2 border-white/20 bg-white/5"><p class="text-white font-black text-5xl mb-4 font-title drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">${i.stat}</p><p class="text-sm text-blue-400 uppercase tracking-widest mb-6 font-black">${i.label}</p><div class="h-[1px] w-12 bg-white/20 mx-auto mb-6"></div><p class="text-sm text-gray-400 leading-relaxed">"${i.desc}"</p></div>`).join('')}</div></div>`;
+            }
+            else if(s.type === 'cta') {
+                html = `<div class="w-full max-w-6xl px-6 animate-enter text-center">
+                    <h2 class="text-5xl md:text-6xl font-title text-white mb-16 uppercase">${s.title}</h2>
+                    <div class="grid md:grid-cols-2 gap-8">
+                        <div class="glass-panel p-12 text-left opacity-60 grayscale rounded-2xl border border-white/5 flex flex-col justify-between">
+                            <div><div class="text-[10px] text-gray-500 font-bold uppercase tracking-[0.3em] mb-4">Option A</div><div class="text-4xl font-title text-gray-400 mb-6">${s.choiceA.title}</div><p class="text-gray-500 text-sm mb-8">Continuer avec les méthodes traditionnelles et laisser le champ libre aux concurrents digitalisés.</p></div>
+                            <div class="text-gray-400 font-black text-xl font-title bg-black/50 p-4 rounded-lg inline-block self-start border border-white/5">${s.choiceA.price}</div>
+                        </div>
+                        <a href="${generateCalendlyLink()}" target="_blank" class="glass-panel p-12 text-left bg-gradient-to-br from-blue-900/40 to-black hover:scale-[1.02] transition-all duration-500 relative overflow-hidden group shadow-[0_0_50px_rgba(37,99,235,0.15)] rounded-2xl border border-blue-500/30 flex flex-col justify-between">
+                            <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-6 py-2 uppercase tracking-widest rounded-bl-xl shadow-lg">La seule issue</div>
+                            <div><div class="text-[10px] text-blue-400 font-bold uppercase tracking-[0.3em] mb-4">Option B</div><div class="text-4xl font-title text-white mb-6">${s.choiceB.title}</div><p class="text-gray-300 text-sm mb-8">Déployer les 4 piliers d'acquisition vidéo, saturer le marché local et automatiser la qualification.</p></div>
+                            <div><div class="text-white font-black text-2xl flex items-center gap-4 font-title mb-6">${s.choiceB.price} <i data-lucide="arrow-right" class="group-hover:translate-x-3 transition-transform text-blue-400"></i></div><div class="text-red-400 text-xs font-black uppercase tracking-widest bg-red-900/20 inline-block px-4 py-2 rounded border border-red-500/20">${s.urgency}</div></div>
+                        </a>
+                    </div>
+                </div>`;
+            }
+            else if(s.type === 'final') {
+                 html = `<div class="text-center animate-enter px-6 max-w-4xl">
+                    <h1 class="text-6xl md:text-8xl font-title text-white mb-8 leading-none uppercase tracking-tighter">${s.title}</h1>
+                    <p class="text-xl md:text-2xl text-gray-400 font-light mb-16 tracking-wide">${s.subtitle}</p>
+                    <a href="${generateCalendlyLink()}" target="_blank" class="inline-flex items-center gap-6 px-12 py-6 bg-white text-black font-black text-xl md:text-2xl uppercase tracking-[0.2em] rounded-full hover:scale-105 transition-all shadow-[0_0_50px_rgba(255,255,255,0.3)] mb-10 border border-white/20">
+                        SÉCURISER LE SECTEUR <i data-lucide="calendar" class="w-7 h-7"></i>
+                    </a>
+                    <p class="text-sm text-red-500 uppercase tracking-[0.2em] font-black"><i data-lucide="alert-triangle" class="w-4 h-4 inline mb-1"></i> ${s.urgency}</p>
+                </div>`;
+            }
+
+            app.innerHTML = html;
+            document.getElementById('counter').innerHTML = `${String(currentIndex + 1).padStart(2,'0')} <span class="text-gray-600 text-lg font-mono">/ ${slides.length}</span>`;
+            document.getElementById('progress-bar').style.width = `${((currentIndex + 1) / slides.length) * 100}%`;
+            lucide.createIcons();
+        }
+
+        function navigate(dir) { currentIndex += dir; renderSlide(); }
+        renderCountrySelect();
+    </script>
+</body>
+</html>
